@@ -29,28 +29,28 @@ func newInvokeContext() *invokeContext {
 	return &invokeContext{success: make(chan bool, 1)}
 }
 
-// debugLogger describes an instance that has implemented a debug logger.
-type debugLogger interface {
+// DebugLogger describes an instance that has implemented a debug logger.
+type DebugLogger interface {
 	Debug(format string, params ...any)
 }
 
-// errorLogger describes an instance that has implemented an error logger.
-type errorLogger interface {
+// ErrorLogger describes an instance that has implemented an error logger.
+type ErrorLogger interface {
 	Error(format string, params ...any)
 }
 
-// fdWriter describes an instance that has implemented os.Write.
-type fdWriter interface {
+// FdWriter describes an instance that has implemented os.Write.
+type FdWriter interface {
 	Write(fd int, data []byte) (n int, err error)
 }
 
-// exiter describes an Instance that has implemented an Exit method.
-type exiter interface {
+// Exiter describes an Instance that has implemented an Exit method.
+type Exiter interface {
 	Exit(code int)
 }
 
-// hostCaller describes an instance that has implemented the waPC HostCall method.
-type hostCaller interface {
+// HostCaller describes an instance that has implemented the waPC HostCall method.
+type HostCaller interface {
 	HostCall(string, string, string, []byte) ([]byte, error)
 }
 
@@ -60,11 +60,11 @@ type Module struct {
 	instance      Instance
 	invokeContext *invokeContext
 
-	debugLog debugLogger
-	errorLog errorLogger
-	writer   fdWriter
-	exit     exiter
-	waPC     hostCaller
+	debugLog DebugLogger
+	errorLog ErrorLogger
+	writer   FdWriter
+	exit     Exiter
+	waPC     HostCaller
 
 	idcounter uint32
 	ids       map[any]uint32
@@ -74,11 +74,12 @@ type Module struct {
 
 // New returns a new Module.
 func New(instance Instance) *Module {
-	debugLog, _ := instance.(debugLogger)
-	errorLog, _ := instance.(errorLogger)
-	writer, _ := instance.(fdWriter)
-	exit, _ := instance.(exiter)
-	waPC, _ := instance.(hostCaller)
+	debugLog, _ := instance.(DebugLogger)
+	errorLog, _ := instance.(ErrorLogger)
+	writer, _ := instance.(FdWriter)
+	exit, _ := instance.(Exiter)
+	waPC, _ := instance.(HostCaller)
+	hostFS, _ := instance.(HostFS)
 
 	var mod *Module
 	mod = &Module{
@@ -258,7 +259,9 @@ func New(instance Instance) *Module {
 								},
 							},
 
-							"chmod":     errorCallback(eNOSYS),
+							"chmod": fsChmod(mod, hostFS),
+							"stat":  fsStat(mod, hostFS),
+
 							"chown":     errorCallback(eNOSYS),
 							"close":     errorCallback(eNOSYS),
 							"fchmod":    errorCallback(eNOSYS),
@@ -276,7 +279,6 @@ func New(instance Instance) *Module {
 							"readlink":  errorCallback(eNOSYS),
 							"rename":    errorCallback(eNOSYS),
 							"rmdir":     errorCallback(eNOSYS),
-							"stat":      errorCallback(eNOSYS),
 							"symlink":   errorCallback(eNOSYS),
 							"truncate":  errorCallback(eNOSYS),
 							"unlink":    errorCallback(eNOSYS),

@@ -6,6 +6,8 @@ type errno string
 // This errno list is a subset of the errors in syscall/tables_js.go.
 const (
 	eNOSYS errno = "ENOSYS"
+	eIO    errno = "EIO"
+	eNOENT errno = "ENOENT"
 )
 
 // errorResponse returns a errno callback response.
@@ -13,7 +15,7 @@ func errorResponse(code errno) []any {
 	return []any{jsProperties{"code": string(code)}}
 }
 
-// errCallback calls the callback with the specified errno code.
+// errorCallback calls the callback with the specified errno code.
 func errorCallback(code errno) *jsFunction {
 	return &jsFunction{
 		fn: func(args []any) any {
